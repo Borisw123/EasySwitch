@@ -4,33 +4,31 @@ EasySwitch - Advanced Async HTTP Client for API requests
 import json
 import asyncio
 import logging
-from typing import (
-    Any, Dict, Optional, Union, AsyncIterator, List
-)
+from typing import Any, Dict, Optional, Union, AsyncIterator, List
 from dataclasses import dataclass
 from time import monotonic
 import aiohttp
 from aiohttp import ClientTimeout, ClientResponse, ClientSession
 
-from easyswitch.exceptions import (
-    NetworkError, RateLimitError, APIError
-)
-
+from easyswitch.exceptions import NetworkError, RateLimitError, APIError
 
 
 logger = logging.getLogger("easyswitch.http")
 
+
 @dataclass
 class HTTPResponse:
     """Structured HTTP response container"""
+
     status: int
     headers: Dict[str, str]
     data: Union[Dict[str, Any], str]
     elapsed: float
 
+
 class HTTPClient:
     """Advanced asynchronous HTTP client with retry logic and connection pooling"""
-    
+
     def __init__(
         self,
         base_url: str,
@@ -40,11 +38,11 @@ class HTTPClient:
         retry_delay: float = 1.0,
         debug: bool = False,
         proxy: Optional[str] = None,
-        pool_size: int = 100
+        pool_size: int = 100,
     ):
         """
         Initialize the HTTP client with advanced configuration.
-        
+
         Args:
             base_url: Base API endpoint
             default_headers: Default headers for all requests
@@ -55,10 +53,10 @@ class HTTPClient:
             proxy: Proxy server URL
             pool_size: Connection pool size
         """
-        self.base_url = base_url.rstrip('/')
+        self.base_url = base_url.rstrip("/")
         self.default_headers = default_headers or {
             "Accept": "application/json",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
         self.timeout = ClientTimeout(total=timeout)
         self.max_retries = max_retries
@@ -67,12 +65,10 @@ class HTTPClient:
         self.proxy = proxy
         self._session: Optional[ClientSession] = None
         self.connector = aiohttp.TCPConnector(
-            limit=pool_size,
-            force_close=False,
-            enable_cleanup_closed=True
+            limit=pool_size, force_close=False, enable_cleanup_closed=True
         )
 
-    async def __aenter__(self) -> 'HTTPClient':
+    async def __aenter__(self) -> "HTTPClient":
         await self.start_session()
         return self
 
@@ -85,7 +81,7 @@ class HTTPClient:
             self._session = ClientSession(
                 connector=self.connector,
                 timeout=self.timeout,
-                headers=self.default_headers
+                headers=self.default_headers,
             )
 
     async def close_session(self) -> None:
@@ -102,11 +98,11 @@ class HTTPClient:
         params: Optional[Dict[str, Any]] = None,
         data: Optional[Union[Dict[str, Any], str]] = None,
         json_data: Optional[Union[Dict[str, Any], List[Any]]] = None,
-        **kwargs
+        **kwargs,
     ) -> HTTPResponse:
         """
         Execute HTTP request with retry logic and advanced error handling.
-        
+
         Args:
             method: HTTP method (GET, POST, etc.)
             endpoint: API endpoint
@@ -115,10 +111,10 @@ class HTTPClient:
             data: Raw request data
             json_data: JSON-serializable data
             kwargs: Additional aiohttp request parameters
-            
+
         Returns:
             HTTPResponse: Structured response object
-            
+
         Raises:
             NetworkError: For connection issues
             APIError: For API-level errors
@@ -126,7 +122,7 @@ class HTTPClient:
         """
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
         merged_headers = {**self.default_headers, **(headers or {})}
-        
+
         if self.debug:
             logger.debug(
                 f"Request: {method} {url}\n"
@@ -137,7 +133,7 @@ class HTTPClient:
 
         start_time = monotonic()
         last_exception = None
-        
+
         for attempt in range(self.max_retries + 1):
             try:
                 if not self._session or self._session.closed:
@@ -151,13 +147,13 @@ class HTTPClient:
                     data=data,
                     json=json_data,
                     proxy=self.proxy,
-                    **kwargs
+                    **kwargs,
                 ) as response:
                     elapsed = monotonic() - start_time
-                    
+
                     # Process response content
-                    content_type = response.headers.get('Content-Type', '')
-                    if 'application/json' in content_type:
+                    content_type = response.headers.get("Content-Type", "")
+                    if "application/json" in content_type:
                         response_data = await response.json()
                     else:
                         response_text = await response.text()
@@ -175,25 +171,25 @@ class HTTPClient:
                     # Handle error responses
                     if response.status == 429:
                         raise RateLimitError(
-                            message = "Rate limit exceeded",
+                            message="Rate limit exceeded",
                             status_code=response.status,
                             raw_response=response_data,
-                            headers=dict(response.headers)
+                            headers=dict(response.headers),
                         )
-                    
+
                     if not 200 <= response.status < 300:
                         raise APIError(
-                            message = f"API request failed with status {response.status}",
-                            status_code = response.status,
-                            raw_response = response_data,
-                            headers = dict(response.headers)
+                            message=f"API request failed with status {response.status}",
+                            status_code=response.status,
+                            raw_response=response_data,
+                            headers=dict(response.headers),
                         )
 
                     return HTTPResponse(
-                        status = response.status,
-                        headers = dict(response.headers),
-                        data = response_data,
-                        elapsed = elapsed
+                        status=response.status,
+                        headers=dict(response.headers),
+                        data=response_data,
+                        elapsed=elapsed,
                     )
 
             except (aiohttp.ClientError, aiohttp.ClientPayloadError) as e:
@@ -201,11 +197,10 @@ class HTTPClient:
                 if attempt == self.max_retries:
                     logger.error(f"Request failed after {self.max_retries} attempts")
                     raise NetworkError(
-                        message=f"Network error: {str(e)}",
-                        original_exception=e
+                        message=f"Network error: {str(e)}", original_exception=e
                     ) from e
-                
-                retry_wait = self.retry_delay * (2 ** attempt)
+
+                retry_wait = self.retry_delay * (2**attempt)
                 logger.warning(
                     f"Attempt {attempt + 1} failed. Retrying in {retry_wait:.1f}s. Error: {str(e)}"
                 )
@@ -215,7 +210,7 @@ class HTTPClient:
                 raise APIError(
                     message="Invalid JSON response",
                     status_code=500,
-                    raw_response=str(e)
+                    raw_response=str(e),
                 ) from e
 
     async def stream_response(
@@ -223,18 +218,14 @@ class HTTPClient:
         method: str,
         endpoint: str,
         headers: Optional[Dict[str, str]] = None,
-        **kwargs
+        **kwargs,
     ) -> AsyncIterator[bytes]:
         """Stream response content in chunks"""
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
         merged_headers = {**self.default_headers, **(headers or {})}
 
         async with self._session.request(
-            method=method,
-            url=url,
-            headers=merged_headers,
-            proxy=self.proxy,
-            **kwargs
+            method=method, url=url, headers=merged_headers, proxy=self.proxy, **kwargs
         ) as response:
             async for chunk in response.content.iter_chunked(1024):
                 yield chunk
@@ -244,7 +235,7 @@ class HTTPClient:
         endpoint: str,
         headers: Optional[Dict[str, str]] = None,
         params: Optional[Dict[str, Any]] = None,
-        **kwargs
+        **kwargs,
     ) -> HTTPResponse:
         """Perform GET request"""
         return await self._request("GET", endpoint, headers, params, **kwargs)
@@ -256,7 +247,7 @@ class HTTPClient:
         params: Optional[Dict[str, Any]] = None,
         data: Optional[Union[Dict[str, Any], str]] = None,
         json_data: Optional[Union[Dict[str, Any], List[Any]]] = None,
-        **kwargs
+        **kwargs,
     ) -> HTTPResponse:
         """Perform POST request"""
         return await self._request(
@@ -270,7 +261,7 @@ class HTTPClient:
         params: Optional[Dict[str, Any]] = None,
         data: Optional[Union[Dict[str, Any], str]] = None,
         json_data: Optional[Union[Dict[str, Any], List[Any]]] = None,
-        **kwargs
+        **kwargs,
     ) -> HTTPResponse:
         """Perform PUT request"""
         return await self._request(
@@ -282,7 +273,7 @@ class HTTPClient:
         endpoint: str,
         headers: Optional[Dict[str, str]] = None,
         params: Optional[Dict[str, Any]] = None,
-        **kwargs
+        **kwargs,
     ) -> HTTPResponse:
         """Perform DELETE request"""
         return await self._request("DELETE", endpoint, headers, params, **kwargs)
@@ -294,7 +285,7 @@ class HTTPClient:
         params: Optional[Dict[str, Any]] = None,
         data: Optional[Union[Dict[str, Any], str]] = None,
         json_data: Optional[Union[Dict[str, Any], List[Any]]] = None,
-        **kwargs
+        **kwargs,
     ) -> HTTPResponse:
         """Perform PATCH request"""
         return await self._request(

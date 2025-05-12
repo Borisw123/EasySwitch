@@ -19,11 +19,11 @@ from easyswitch.types import Currency, Provider
 class LogLevel(str, Enum):
     """Log Levels"""
 
-    DEBUG = 'debug'
-    INFO = 'info'
-    WARNING = 'warning'
-    ERROR = 'error'
-    CRITICAL = 'critical'
+    DEBUG = "debug"
+    INFO = "info"
+    WARNING = "warning"
+    ERROR = "error"
+    CRITICAL = "critical"
 
 
 ####
@@ -32,8 +32,8 @@ class LogLevel(str, Enum):
 class LogFormat(str, Enum):
     """Log Format choices."""
 
-    PLAIN = 'plain'
-    JSON = 'json'
+    PLAIN = "plain"
+    JSON = "json"
 
 
 ####
@@ -60,7 +60,7 @@ class BaseConfigModel(BaseModel):
     """Base class of all configuration models."""
 
     class Config:
-        extra = 'forbid'  # Undefined fields are not allowed
+        extra = "forbid"  # Undefined fields are not allowed
         validate_all = True
         use_enum_values = True
 
@@ -78,8 +78,8 @@ class ProviderConfig(BaseConfigModel):
     callback_url: Optional[str] = None
     return_url: Optional[str] = None
     timeout: int = 30
-    environment: str = "sandbox"    # sandbox|production
-    extra: Dict[str, Any] = {}      # Extra data (specific for each provider)
+    environment: str = "sandbox"  # sandbox|production
+    extra: Dict[str, Any] = {}  # Extra data (specific for each provider)
 
 
 ####
@@ -104,36 +104,32 @@ class RootConfig(BaseConfigModel):
 
     default_provider: Optional[Provider] = None
 
-    @field_validator('environment')
+    @field_validator("environment")
     def validate_environment(cls, v):
-        """ Ensure Config's environment value is valid. """
+        """Ensure Config's environment value is valid."""
 
-        if v not in ('sandbox', 'production', 'development'):
+        if v not in ("sandbox", "production", "development"):
             raise ConfigurationError(
                 "Environment must be 'sandbox', 'development' or 'production'"
             )
         return v
-    
-    @field_validator('default_provider')
+
+    @field_validator("default_provider")
     def validate_default_provider(cls, v, values):
         """Ensure default provider is valid."""
 
         # Ensure default provider is in enabled providers
-        if v is not None and 'providers' in values and v not in values['providers']:
-            raise ValueError(
-                f"Default provider {v} must be in enabled providers"
-            )
-        
+        if v is not None and "providers" in values and v not in values["providers"]:
+            raise ValueError(f"Default provider {v} must be in enabled providers")
+
         # and in supported Providers
         if v not in Provider.__members__:
-            raise ValueError(
-                f"Default provider {v} is not supported"
-            )
+            raise ValueError(f"Default provider {v} is not supported")
         return v
-    
-    @field_validator('default_currency')
-    def validate_environment(cls, v):
-        """ Ensure Config's default currency value is valid. """
+
+    @field_validator("default_currency")
+    def validate_default_currency(cls, v):
+        """Ensure Config's default currency value is valid."""
 
         if v not in Currency.__members__:
             raise ConfigurationError(
@@ -144,7 +140,7 @@ class RootConfig(BaseConfigModel):
 
 
 ####
-##      BASE CONFIGURATION SOURCE CLASS 
+##      BASE CONFIGURATION SOURCE CLASS
 #####
 class BaseConfigSource(ABC):
     """Base interface for all configuration sources."""

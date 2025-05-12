@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 ##      AVAILABLE PROVIDER CHOICES
 #####
 class Provider(str, Enum):
-    """ Available choices for supported Payment providers. """
+    """Available choices for supported Payment providers."""
 
     # MTN = "mtn"
     # ORANGE = "orange"
@@ -21,8 +21,8 @@ class Provider(str, Enum):
     # PAYDUNYA = "paydunya"
 
     @classmethod
-    def register(cls,name: str):
-        """ Register a provider. """
+    def register(cls, name: str):
+        """Register a provider."""
 
         setattr(cls, name.upper(), name)
 
@@ -50,11 +50,11 @@ class Currency(str, Enum):
 class Countries(str, Enum):
     """Supported Countries Choices."""
 
-    TOGO = 'TG'
-    BENIN = 'BJ'
-    GHANA = 'GH'
-    BURKINA = 'BF'
-    IVORY_COAST = 'CI'
+    TOGO = "TG"
+    BENIN = "BJ"
+    GHANA = "GH"
+    BURKINA = "BF"
+    IVORY_COAST = "CI"
 
 
 ####
@@ -145,28 +145,28 @@ class PaymentResponse:
     customer: Optional[CustomerInfo] = None
     raw_response: Dict[str, Any] = field(default_factory=dict)
     metadata: Dict[str, Any] = field(default_factory=dict)
-    
+
     @property
     def is_successful(self) -> bool:
         """Check if the transaction was successful."""
         return self.status == TransactionStatus.SUCCESSFUL
-    
+
     @property
     def is_pending(self) -> bool:
         """Check if the transaction is pending."""
         return self.status in [
             TransactionStatus.PENDING,
             TransactionStatus.PROCESSING,
-            TransactionStatus.INITIATED
+            TransactionStatus.INITIATED,
         ]
-    
+
     @property
     def is_failed(self) -> bool:
         """Check if the transaction failed."""
         return self.status in [
             TransactionStatus.FAILED,
             TransactionStatus.CANCELLED,
-            TransactionStatus.EXPIRED
+            TransactionStatus.EXPIRED,
         ]
 
 
@@ -209,9 +209,9 @@ class WebhookEvent:
     amount: float
     currency: Currency
     created_at: datetime
-    raw_data: Dict[str, Any] = field(default_factory = dict)
-    metadata: Dict[str, Any] = field(default_factory = dict)
-    context: Dict[str,Any] = field(default_factory = dict)
+    raw_data: Dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    context: Dict[str, Any] = field(default_factory=dict)
 
     # def get_status
 
@@ -236,23 +236,23 @@ class ApiCredentials:
     app_id: Optional[str] = None
     callback_url: Optional[str] = None
     return_url: Optional[str] = None
-    channels: Optional[str] = 'MOBILE_MONEY'  # Default to ALL channels
-    lang: Optional[str] = 'fr'
+    channels: Optional[str] = "MOBILE_MONEY"  # Default to ALL channels
+    lang: Optional[str] = "fr"
 
-    def load_from_env(self,provider: Provider):
+    def load_from_env(self, provider: Provider):
         """Load credentials from environment variables."""
 
         for field in self.__dataclass_fields__:
-            env_value = os.getenv(f'EASYSWITCH_{provider.upper()}_{field.upper()}')
+            env_value = os.getenv(f"EASYSWITCH_{provider.upper()}_{field.upper()}")
             if env_value:
                 setattr(self, field, env_value)
         return self
-    
-    def write_to_env(self,provider: Provider):
+
+    def write_to_env(self, provider: Provider):
         """Write credentials to environment variables."""
 
         for field in self.__dataclass_fields__:
             env_value = getattr(self, field)
             if env_value:
-                os.environ[f'EASYSWITCH_{provider.upper()}_{field.upper()}'] = env_value
+                os.environ[f"EASYSWITCH_{provider.upper()}_{field.upper()}"] = env_value
         return self

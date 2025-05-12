@@ -11,10 +11,10 @@ from easyswitch.conf.base import BaseConfigSource
 ####
 ##      DICT CONFIGURATION SOURSE CLASS
 #####
-@register_source('dict')
+@register_source("dict")
 class DictConfigSource(BaseConfigSource):
     """Load EasySwitch configurations from a Python dictionnary object."""
-    
+
     def __init__(self, config_dict: Dict[str, Any]):
         self.config_dict = config_dict
 

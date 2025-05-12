@@ -9,15 +9,23 @@ from typing import Any, ClassVar, Dict, List, Optional
 
 from easyswitch.utils.http import HTTPClient
 from easyswitch.adapters.base import AdaptersRegistry, BaseAdapter
-from easyswitch.exceptions import (AuthenticationError, PaymentError,
-                                   UnsupportedOperationError)
-from easyswitch.types import (Currency, CustomerInfo, PaymentResponse,
-                              Provider, TransactionDetail, TransactionStatus,
-                              TransactionStatusResponse, TransactionType,
-                              WebhookEvent)
-from easyswitch.utils import (
-    dict_to_encoded_query_string, encoded_query_string_to_dict
+from easyswitch.exceptions import (
+    AuthenticationError,
+    PaymentError,
+    UnsupportedOperationError,
 )
+from easyswitch.types import (
+    Currency,
+    CustomerInfo,
+    PaymentResponse,
+    Provider,
+    TransactionDetail,
+    TransactionStatus,
+    TransactionStatusResponse,
+    TransactionType,
+    WebhookEvent,
+)
+from easyswitch.utils import dict_to_encoded_query_string, encoded_query_string_to_dict
 
 
 ####
@@ -41,7 +49,7 @@ class BizaoAdapter(BaseAdapter):
         Currency.XAF,
         Currency.CDF,
         Currency.GNF,
-        Currency.USD
+        Currency.USD,
     ]
 
     MIN_AMOUNT: ClassVar[Dict[Currency, float]] = {
@@ -49,77 +57,82 @@ class BizaoAdapter(BaseAdapter):
         Currency.XAF: 100.0,
         Currency.CDF: 1000.0,
         Currency.GNF: 1000.0,
-        Currency.USD: 1.0
+        Currency.USD: 1.0,
     }
 
-    MAX_AMOUNT: ClassVar[Dict[Currency, float]] = {     # Currently unknown
+    MAX_AMOUNT: ClassVar[Dict[Currency, float]] = {  # Currently unknown
         Currency.XOF: 1000000.0,
         Currency.XAF: 1000000.0,
         Currency.CDF: 1000000.0,
         Currency.GNF: 1000000.0,
-        Currency.USD: 10000.0
+        Currency.USD: 10000.0,
     }
 
     def _validate_credentials(self) -> bool:
-        """ Validate the credentials for Bizao. """
-        
-        return all([
-            self.config.api_key, 
-            self.config.extra,                              # Extra configs must be set
-            # DEVELOPMENT CREDENTIALS
-            self.config.extra.get("dev_client_id"),         # Bizao uses CLIENT_ID 
-            self.config.extra.get("dev_client_secret"),     # and secret key (token)
-            self.config.extra.get("dev_token_url"),         # Token Url
-            # PRODUCTION CREDENTIALS
-            self.config.extra.get("prod_client_id"),         
-            self.config.extra.get("prod_client_secret"),     
-            self.config.extra.get("prod_token_url"),         
-            # EXTRA
-            self.config.extra.get("country-code"),
-            self.config.extra.get("mno-name"),              # The provider to use in Bizao's name
-            self.config.extra.get("channel"),               # Payment channel, choices are 'web', 'tpe', 'Ussd'
-            self.config.extra.get("lang"),
-            self.config.extra.get("cancel_url")
-        ])
-    
+        """Validate the credentials for Bizao."""
+
+        return all(
+            [
+                self.config.api_key,
+                self.config.extra,  # Extra configs must be set
+                # DEVELOPMENT CREDENTIALS
+                self.config.extra.get("dev_client_id"),  # Bizao uses CLIENT_ID
+                self.config.extra.get("dev_client_secret"),  # and secret key (token)
+                self.config.extra.get("dev_token_url"),  # Token Url
+                # PRODUCTION CREDENTIALS
+                self.config.extra.get("prod_client_id"),
+                self.config.extra.get("prod_client_secret"),
+                self.config.extra.get("prod_token_url"),
+                # EXTRA
+                self.config.extra.get("country-code"),
+                self.config.extra.get(
+                    "mno-name"
+                ),  # The provider to use in Bizao's name
+                self.config.extra.get(
+                    "channel"
+                ),  # Payment channel, choices are 'web', 'tpe', 'Ussd'
+                self.config.extra.get("lang"),
+                self.config.extra.get("cancel_url"),
+            ]
+        )
+
     def get_credentials(self):
         """Get the credentials for Bizao."""
         # NOTE that credentials are checked in the constructor
 
         return {
             "client_id": (
-                self.config.extra.get('dev_client_id','') if
-                self.config.environment == 'sandbox' else
-                self.config.extra.get('prod_client_id','')
+                self.config.extra.get("dev_client_id", "")
+                if self.config.environment == "sandbox"
+                else self.config.extra.get("prod_client_id", "")
             ),
             "client_secret": (
-                self.config.extra.get('dev_client_secret','') if
-                self.config.environment == 'sandbox' else
-                self.config.extra.get('prod_client_secret','')
-            )
+                self.config.extra.get("dev_client_secret", "")
+                if self.config.environment == "sandbox"
+                else self.config.extra.get("prod_client_secret", "")
+            ),
         }
-    
-    def get_extra_headers(self,**extra):
+
+    def get_extra_headers(self, **extra):
         """Returns extra headers"""
-        
-        return {
-            'country-code': self.config.extra.get('country-code'), 
-            'mno-name': self.config.extra.get('mno-name').lower(),
-            'channel': self.config.extra.get('channel'),
-            'lang': self.config.extra.get('lang','FR').lower()
-        } if extra.get('transaction',None) else {}
-    
+
+        return (
+            {
+                "country-code": self.config.extra.get("country-code"),
+                "mno-name": self.config.extra.get("mno-name").lower(),
+                "channel": self.config.extra.get("channel"),
+                "lang": self.config.extra.get("lang", "FR").lower(),
+            }
+            if extra.get("transaction", None)
+            else {}
+        )
+
     def get_headers(
-        self, 
-        c_type = 'application/json',
-        authorization = False,
-        extra = False, **kwargs
+        self, c_type="application/json", authorization=False, extra=False, **kwargs
     ):
         """Get the headers for Bizao."""
 
-        headers = {
-            'Content-Type': c_type
-        }
+        headers = {"Content-Type": c_type}
 
         if authorization:
             header |= self.get_authrizations(authorization)
@@ -127,73 +140,68 @@ class BizaoAdapter(BaseAdapter):
         # ADD EXTRA HEADERS
         if extra:
             header |= self.get_extra_headers(**kwargs)
-       
+
         return headers
-    
-    def get_authrizations(self,auth = False, basic = False) -> dict:
-        ''' Returns authrization informations. '''
-        return {
-            'Authorization': f'Bearer {self.config.api_key}',
-        }   if auth else {}
-    
+
+    def get_authrizations(self, auth=False, basic=False) -> dict:
+        """Returns authrization informations."""
+        return (
+            {
+                "Authorization": f"Bearer {self.config.api_key}",
+            }
+            if auth
+            else {}
+        )
+
     def get_token_url(self) -> str:
         """Return a token url based on environment."""
 
         return (
-            self.config.extra.get("dev_token_url",'') if
-            self.config.environment == 'sandbox' else
-            self.config.extra.get("prod_token_url",'')
+            self.config.extra.get("dev_token_url", "")
+            if self.config.environment == "sandbox"
+            else self.config.extra.get("prod_token_url", "")
         )
-    
+
     async def authenticate(self):
         """Make auth request and get auth token."""
 
         # First get client identifiers from config
         creds = self.get_credentials()
-        
+
         # Second, generate a basic token from creds
         basic_token = base64.b64encode(
-            bytes(
-                f"{creds['client_id']}:{creds['client_secret']}",
-                'utf-8'
-            )
+            bytes(f"{creds['client_id']}:{creds['client_secret']}", "utf-8")
         )
         # Now, build headers
         headers = self.get_headers(
-            c_type = 'application/x-www-form-urlencoded',   # CONTENT TYPE
+            c_type="application/x-www-form-urlencoded",  # CONTENT TYPE
         )
         # Update it with Authorization header
-        headers |= {'Authorization': f'Basic {str(basic_token,"utf-8")}'}
+        headers |= {"Authorization": f'Basic {str(basic_token,"utf-8")}'}
 
         # Make request to get the access_token
-        async with HTTPClient(
-            self.get_token_url(),
-            default_headers = headers
-        ) as client:
+        async with HTTPClient(self.get_token_url(), default_headers=headers) as client:
             response = await client.post(
-                '',
-                params = {'grant_type': 'client_credentials'},
+                "",
+                params={"grant_type": "client_credentials"},
             )
 
             # Then Check for success
-            if response.status in range(200,300):
+            if response.status in range(200, 300):
                 self.config.api_key = response.data
 
             # Raise AuthenticationError
             raise AuthenticationError(
                 message="Authentication failed",
-                status_code = response.status,
-                raw_response = response.data
+                status_code=response.status,
+                raw_response=response.data,
             )
 
-    def format_transaction(
-        self, 
-        transaction: TransactionDetail
-    ) -> Dict[str, Any]:
+    def format_transaction(self, transaction: TransactionDetail) -> Dict[str, Any]:
         """Format the transaction data into a Bizao's expected format."""
 
         # Check if the transaction is valid
-        self.validate_transaction(transaction)     # Will raise ValidationError if needed.
+        self.validate_transaction(transaction)  # Will raise ValidationError if needed.
 
         # Then build payload
         payload = {
@@ -203,42 +211,42 @@ class BizaoAdapter(BaseAdapter):
             "reference": transaction.reference,
             "state": dict_to_encoded_query_string(transaction.metadata),
             "return_url": transaction.return_url or self.config.return_url,
-            "cancel_url": self.config.extra.get("cancel_url",''),
+            "cancel_url": self.config.extra.get("cancel_url", ""),
             # "otp_code":""
         }
-        # Optional for web channel but required for TPE and USSD channels 
+        # Optional for web channel but required for TPE and USSD channels
         if self.config.extra.get("channel") == "tpe":
             payload["user_msisdn"] = transaction.customer.phone_number.replace(" ", "")
 
         return payload
-    
+
     def get_normalize_status(self, status):
-        """ Normalize the status of a transaction. """
+        """Normalize the status of a transaction."""
 
         # Mapp Bizao statues to EasySwitch standardized status
         # Bizao's documentation is not very clear about available Transaction status
         # so we'll move on with followings.
         statues = {
             # Successful status
-            'SUCCESSFUL': TransactionStatus.SUCCESSFUL,
-            'OK': TransactionStatus.SUCCESSFUL,
+            "SUCCESSFUL": TransactionStatus.SUCCESSFUL,
+            "OK": TransactionStatus.SUCCESSFUL,
             # Pending status
-            'PENDING': TransactionStatus.PENDING,
-            'WAITING': TransactionStatus.PENDING,
+            "PENDING": TransactionStatus.PENDING,
+            "WAITING": TransactionStatus.PENDING,
             # Failure status
-            'FAILURE': TransactionStatus.FAILED,
-            'FAILED': TransactionStatus.FAILED,
-            'FAIL': TransactionStatus.FAILED,
+            "FAILURE": TransactionStatus.FAILED,
+            "FAILED": TransactionStatus.FAILED,
+            "FAIL": TransactionStatus.FAILED,
             # Cancelation status
-            'CANCELLED': TransactionStatus.CANCELLED,
+            "CANCELLED": TransactionStatus.CANCELLED,
             # Error status
-            'ERROR': TransactionStatus.ERROR,
+            "ERROR": TransactionStatus.ERROR,
             # Expiry status
-            'EXPIRED': TransactionStatus.EXPIRED
+            "EXPIRED": TransactionStatus.EXPIRED,
         }
 
         return statues.get(status, TransactionStatus.UNKNOWN)
-    
+
     async def send_payment(self, transaction: TransactionDetail) -> PaymentResponse:
         """
         Send a payment request to Bizao.
@@ -248,44 +256,44 @@ class BizaoAdapter(BaseAdapter):
 
         # Then send the request to provider
         async with self.get_client() as client:
-
             response = await client.post(
-                endpoint = self.ENDPOINTS["payment"],
-                json_data = order,
-                headers = self.get_headers(
-                    authorization = True
-                ),
+                endpoint=self.ENDPOINTS["payment"],
+                json_data=order,
+                headers=self.get_headers(authorization=True),
             )
 
             # Check for success
-            if response.status in range(200,300):
+            if response.status in range(200, 300):
                 # Then Process data and return Payment Response.
                 status_atr = (
-                    'message' if 
-                    self.config.extra.get('channel','web') == 'web' 
-                    else 'status'
+                    "message"
+                    if self.config.extra.get("channel", "web") == "web"
+                    else "status"
                 )
                 data = response.data
                 return PaymentResponse(
-                    transaction_id = transaction.transaction_id,
-                    reference = transaction.reference,
-                    provider = self.provider_name(),
-                    status = self.get_normalize_status(data.get(status_atr,'').upper()),
-                    currency = transaction.currency,
-                    amount = data.get('amount') or transaction.amount,      # In case of web channel.
-                    payment_link = data.get('payment_url',''),
-                    transaction_token = data.get('pay_token',''),           # Will be empty in case of tpe and ussd channels
-                    metadata = encoded_query_string_to_dict(data.get('state','')),
-                    raw_response = data
+                    transaction_id=transaction.transaction_id,
+                    reference=transaction.reference,
+                    provider=self.provider_name(),
+                    status=self.get_normalize_status(data.get(status_atr, "").upper()),
+                    currency=transaction.currency,
+                    amount=data.get("amount")
+                    or transaction.amount,  # In case of web channel.
+                    payment_link=data.get("payment_url", ""),
+                    transaction_token=data.get(
+                        "pay_token", ""
+                    ),  # Will be empty in case of tpe and ussd channels
+                    metadata=encoded_query_string_to_dict(data.get("state", "")),
+                    raw_response=data,
                 )
 
             # If the response is not successful, raise an API error
             raise PaymentError(
                 message="Payment request failed",
-                status_code = response.status,
-                raw_response = response.data
+                status_code=response.status,
+                raw_response=response.data,
             )
-        
+
     async def check_status(self, transaction_id: str) -> TransactionStatusResponse:
         """
         Check the status of a transaction.
@@ -296,24 +304,22 @@ class BizaoAdapter(BaseAdapter):
             # Then make the request
             response = await client.get(
                 endpoint=self.ENDPOINTS["payment_status"].format(
-                    transaction_id = transaction_id
+                    transaction_id=transaction_id
                 ),
-                headers = self.get_headers(
-                    authorization = True
-                ),
+                headers=self.get_headers(authorization=True),
             )
 
             data = response.data
 
             # Return Transaction status Response
             return TransactionStatusResponse(
-                transaction_id = transaction_id,
-                provider = self.provider_name(),
-                status = self.get_normalize_status(data.get('status','').upper()),
-                amount = data.get("amount"),
-                data = data
+                transaction_id=transaction_id,
+                provider=self.provider_name(),
+                status=self.get_normalize_status(data.get("status", "").upper()),
+                amount=data.get("amount"),
+                data=data,
             )
-        
+
     async def cancel_transaction(self, transaction_id):
         """
         Cancel a transaction.
@@ -321,32 +327,29 @@ class BizaoAdapter(BaseAdapter):
         # Bizao does not support transaction cancellation
         raise UnsupportedOperationError(
             message="Bizao does not support transaction cancellation",
-            provider = self.provider_name()
+            provider=self.provider_name(),
         )
-    
+
     async def refund(
-        self, 
-        transaction_id: str, 
-        amount: Optional[float] = None
+        self, transaction_id: str, amount: Optional[float] = None
     ) -> PaymentResponse:
         """
         Refund a transaction.
         """
         # Bizao does not support refunds
         raise UnsupportedOperationError(
-            message="Bizao does not support refunds",
-            provider = self.provider_name()
+            message="Bizao does not support refunds", provider=self.provider_name()
         )
-    
+
     async def get_transaction_details(self, transaction_id: str) -> TransactionDetail:
         """
         Get the details of a transaction.
         """
-        # Bizao does not support 
+        # Bizao does not support
         raise UnsupportedOperationError(
-            message = (
+            message=(
                 "Bizao does not allow to retrive transactions by id. "
                 "Use check_status instead."
             ),
-            provider = self.provider_name()
+            provider=self.provider_name(),
         )

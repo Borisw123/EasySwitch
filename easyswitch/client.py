@@ -7,10 +7,18 @@ from typing import Any, ClassVar, Dict, Optional, Union
 from easyswitch.adapters import AdaptersRegistry, BaseAdapter
 from easyswitch.conf import RootConfig
 from easyswitch.conf.manager import ConfigManager
-from easyswitch.exceptions import (AuthenticationError, ConfigurationError,
-                                   InvalidProviderError)
-from easyswitch.types import (Currency, CustomerInfo, PaymentResponse,
-                              Provider, TransactionStatus)
+from easyswitch.exceptions import (
+    AuthenticationError,
+    ConfigurationError,
+    InvalidProviderError,
+)
+from easyswitch.types import (
+    Currency,
+    CustomerInfo,
+    PaymentResponse,
+    Provider,
+    TransactionStatus,
+)
 
 
 ####
@@ -23,21 +31,21 @@ class EasySwitch:
     Examples:
         >>> # From environment variables
         >>> client = EasySwitch.from_env()
-        
+
         >>> # From JSON file
         >>> client = EasySwitch.from_json("config.json")
-        
+
         >>> # From multiple sources
         >>> client = EasySwitch.from_multi_sources(
         ...     env_file=".env",
         ...     json_file="fallback.json"
         ... )
     """
-    
+
     def __init__(self, config: RootConfig):
         """
         Initialize the EasySwitch client with validated configuration.
-        
+
         Args:
             config: Validated configuration object
         """
@@ -46,74 +54,60 @@ class EasySwitch:
         self._initialize_integrators()
 
     @classmethod
-    def from_config(cls, config: RootConfig) -> 'EasySwitch':
+    def from_config(cls, config: RootConfig) -> "EasySwitch":
         """Create client from existing RootConfig"""
         return cls(config)
 
     @classmethod
     def from_env(
-        cls,
-        env_file: Optional[Union[str, Path]] = None,
-        **kwargs
-    ) -> 'EasySwitch':
+        cls, env_file: Optional[Union[str, Path]] = None, **kwargs
+    ) -> "EasySwitch":
         """
         Create client from environment variables.
-        
+
         Args:
             env_file: Path to .env file (optional)
             **kwargs: Additional arguments for ConfigManager
         """
         manager = ConfigManager.from_env(env_file, **kwargs)
         return cls(manager.load().get_config())
-    
+
     @classmethod
-    def from_dict(
-        cls,
-        config_dict: Dict[str, Any],
-        **kwargs
-    ) -> 'EasySwitch':
+    def from_dict(cls, config_dict: Dict[str, Any], **kwargs) -> "EasySwitch":
         """
         Create client from Python dictionary.
-        
+
         Args:
             config_dict: Configuration dictionary
             **kwargs: Additional arguments for ConfigManager
         """
         manager = ConfigManager.from_dict(config_dict, **kwargs)
         return cls(manager.load().get_config())
-    
+
     @classmethod
-    def from_json(
-        cls,
-        json_file: Union[str, Path],
-        **kwargs
-    ) -> 'EasySwitch':
+    def from_json(cls, json_file: Union[str, Path], **kwargs) -> "EasySwitch":
         """
         Create client from JSON file.
-        
+
         Args:
             json_file: Path to JSON configuration file
             **kwargs: Additional arguments for ConfigManager
         """
         manager = ConfigManager.from_json(json_file, **kwargs)
         return cls(manager.load().get_config())
-    
+
     @classmethod
-    def from_yaml(
-        cls,
-        yaml_file: Union[str, Path],
-        **kwargs
-    ) -> 'EasySwitch':
+    def from_yaml(cls, yaml_file: Union[str, Path], **kwargs) -> "EasySwitch":
         """
         Create client from YAML file.
-        
+
         Args:
             yaml_file: Path to YAML configuration file
             **kwargs: Additional arguments for ConfigManager
         """
         manager = ConfigManager.from_yaml(yaml_file, **kwargs)
         return cls(manager.load().get_config())
-    
+
     @classmethod
     def from_multi_sources(
         cls,
@@ -121,8 +115,8 @@ class EasySwitch:
         json_file: Optional[Union[str, Path]] = None,
         yaml_file: Optional[Union[str, Path]] = None,
         config_dict: Optional[Dict[str, Any]] = None,
-        **kwargs
-    ) -> 'EasySwitch':
+        **kwargs,
+    ) -> "EasySwitch":
         """
         Create client from multiple configuration sources with fallback logic.
         Sources are loaded in this order with later sources overriding earlier ones:
@@ -130,7 +124,7 @@ class EasySwitch:
         2. JSON file
         3. YAML file
         4. Python dictionary
-        
+
         Args:
             env_file: Path to .env file (optional)
             json_file: Path to JSON file (optional)
@@ -142,19 +136,19 @@ class EasySwitch:
 
         # Add .env source if exists
         if env_file:
-            manager.add_source('env', env_file)
+            manager.add_source("env", env_file=env_file)
 
         # Add json file source if exists
         if json_file:
-            manager.add_source('json', json_file)
-        
+            manager.add_source("json", json_file=json_file)
+
         # Add yaml file source if exists
         if yaml_file:
-            manager.add_source('yaml', yaml_file)
-        
+            manager.add_source("yaml", yaml_file=yaml_file)
+
         # And dict source too
         if config_dict:
-            manager.add_source('dict', config_dict)
+            manager.add_source("dict", config_dict)
 
         return cls(manager.load(**kwargs).get_config())
 
@@ -175,7 +169,7 @@ class EasySwitch:
         else:
             # Set first provider as default if none specified
             self.config.default_provider = next(iter(self.config.providers.keys()))
-    
+
     def _initialize_integrators(self):
         """Initialize all configured provider integrators."""
 
@@ -196,11 +190,8 @@ class EasySwitch:
                 raise ConfigurationError(
                     f"Failed to initialize provider '{provider_name}': {str(e)}"
                 )
-    
-    def _get_integrator(
-        self, 
-        provider: Optional[Provider] = None
-    ) -> BaseAdapter:
+
+    def _get_integrator(self, provider: Optional[Provider] = None) -> BaseAdapter:
         """Get the integrator for specified provider or default."""
 
         provider = provider or self.config.default_provider
@@ -209,16 +200,16 @@ class EasySwitch:
             raise ConfigurationError(
                 "No provider specified and no default provider set"
             )
-        
+
         if provider not in self._integrators:
             raise InvalidProviderError(
                 f"The Provider '{provider}' is not supported. "
                 "perhaps you forgot to enable it in the configuration. "
                 f"Available choices are: {self.config.providers}"
             )
-        
+
         return self._integrators[provider]
-    
+
     async def send_payment(
         self,
         provider: Provider,
@@ -227,11 +218,11 @@ class EasySwitch:
         currency: Currency,
         reference: str,
         customer_info: Optional[CustomerInfo] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> PaymentResponse:
         """
         Envoie une demande de paiement à un fournisseur spécifique.
-        
+
         Args:
             provider: Le fournisseur de paiement à utiliser
             amount: Le montant à payer
@@ -240,7 +231,7 @@ class EasySwitch:
             reference: Référence unique pour le paiement
             customer_info: Informations supplémentaires sur le client
             metadata: Métadonnées personnalisées
-            
+
         Returns:
             PaymentResponse: Réponse de la demande de paiement
         """
@@ -251,59 +242,59 @@ class EasySwitch:
             currency=currency,
             reference=reference,
             customer_info=customer_info,
-            metadata=metadata
+            metadata=metadata,
         )
-    
-    async def check_status(self, provider: Provider, transaction_id: str) -> TransactionStatus:
+
+    async def check_status(
+        self, provider: Provider, transaction_id: str
+    ) -> TransactionStatus:
         """
         Vérifie le statut d'une transaction.
-        
+
         Args:
             provider: Le fournisseur de paiement utilisé
             transaction_id: L'identifiant de la transaction à vérifier
-            
+
         Returns:
             TransactionStatus: Le statut actuel de la transaction
         """
         integrator = self._get_integrator(provider)
         return await integrator.check_status(transaction_id)
-    
+
     async def cancel_transaction(self, provider: Provider, transaction_id: str) -> bool:
         """
         Annule une transaction si possible.
-        
+
         Args:
             provider: Le fournisseur de paiement utilisé
             transaction_id: L'identifiant de la transaction à annuler
-            
+
         Returns:
             bool: True si l'annulation a réussi, False sinon
         """
         integrator = self._get_integrator(provider)
         return await integrator.cancel_transaction(transaction_id)
-    
+
     async def refund(
         self,
         provider: Provider,
         transaction_id: str,
         amount: Optional[float] = None,
-        reason: Optional[str] = None
+        reason: Optional[str] = None,
     ) -> PaymentResponse:
         """
         Effectue un remboursement pour une transaction.
-        
+
         Args:
             provider: Le fournisseur de paiement utilisé
             transaction_id: L'identifiant de la transaction à rembourser
             amount: Le montant à rembourser (si None, rembourse le montant total)
             reason: La raison du remboursement
-            
+
         Returns:
             PaymentResponse: Réponse de la demande de remboursement
         """
         integrator = self._get_integrator(provider)
         return await integrator.refund(
-            transaction_id=transaction_id,
-            amount=amount,
-            reason=reason
+            transaction_id=transaction_id, amount=amount, reason=reason
         )
